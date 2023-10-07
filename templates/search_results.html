@@ -1,0 +1,9 @@
+{% extends "layout.html" %}
+{% block content %}
+    <h1>Search Results</h1>
+    <ul>
+    {% for match in matches %}
+        <li><a href="/pokemon/{{ match }}">{{ match }}</a></li>
+    {% endfor %}
+    </ul>
+{% endblock %}

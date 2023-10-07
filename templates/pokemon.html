@@ -1,0 +1,251 @@
+{% extends "layout.html" %}
+{% block content %}
+<!-- Back button and Search bar -->
+<div class="header-controls">
+    <a href="{{ url_for('index') }}" class="back-button">Back</a>
+    
+    <form action="{{ url_for('search') }}" method="post" class="search-bar">
+        <input type="text" id="searchInput" onkeyup="searchFunction()" name="name" placeholder="Search Pokémon...">
+        <div id="searchResults" class="search-results"></div>
+        <button type="submit">Go</button>
+    </form>
+</div>
+<!-- Pokemon name and define stats table -->
+    <h1>{{ name }}</h1>
+    <table class="stats-table">
+        <thead>
+            <tr>
+                <th>Stat Name</th>
+                <th>Base</th>
+                <th>Bar</th>
+                <th>Min</th>
+                <th>Max</th>
+            </tr>
+        </thead>
+        <tbody>
+
+<!-- Pokedex Data -->
+<div class="pokemon-details">
+    <div class="pokedex-data">
+        <h2>Pokedex Data</h2>
+            <div class="type-container">
+                {% set types_list = data.Types.strip().split(",") %}
+                {% for type in types_list %}
+                    <span class="type {{ type.strip().lower() }}">{{ type.strip() }}</span>
+                {% endfor %}
+            </div>
+            <div class = "poke-data">
+                <p><strong>Species:</strong> {{ data.Category.strip() }}</p>
+                {% set feet = (data.Height.strip()|float * 3.28084)|int %}
+                {% set inches = ((data.Height.strip()|float * 3.28084 - feet) * 12)|round(0, 'floor')|int %}
+                <p><strong>Height:</strong> {{ data.Height.strip() }} m ({{ feet }}'{{ inches }}″)</p>
+                <p><strong>Weight:</strong> {{ data.Weight.strip() }} kg ({{ (data.Weight.strip()|float * 2.20462)|round(1) }} lbs)</p>
+                <p><strong>Abilities:</strong></p>
+                <ul>
+                    {% set abilities_list = data.Abilities.split(",") %}
+                    {% for ability in abilities_list %}
+                        <li>{{ ability.strip() }}</li>
+                    {% endfor %}
+                </ul>
+                
+                {% if data.HiddenAbilities %}
+                    <ul>
+                        {% set hidden_abilities_list = data.HiddenAbilities.split(",") %}
+                        {% for hidden_ability in hidden_abilities_list %}
+                            <li><i style="font-size: smaller;">{{ hidden_ability.strip() }} (hidden ability)</i></li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+        </div>
+<!-- Type Effectiveness Table -->
+        <div class="type-effectiveness">
+            <h2>Type Effectiveness</h2>
+            
+            <div class="type-row">
+                {% for type in effectiveness.keys()|tolist_slice(0, 9) %}
+                    <div class="type-header">{{ type[:3].upper() }}</div> 
+                {% endfor %}
+            </div>
+            
+            <div class="effectiveness-row">
+                {% for multiplier in effectiveness.values()|tolist_slice(0, 9) %}
+                    <div data-effectiveness="{{ multiplier }}" class="{{ 'effect-' + multiplier|string|replace('.', '_') }}">
+                        {% if multiplier == 2 %}
+                            2
+                        {% elif multiplier == 4 %}
+                            4
+                        {% elif multiplier == 0.5 %}
+                            ½
+                        {% elif multiplier == 0.25 %}
+                            ¼
+                        {% else %}
+                            {{ '' if multiplier == 1.0 else multiplier }}
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <div class="type-row">
+                {% for type in effectiveness.keys()|tolist_slice(9, 18) %}
+                    <div class="type-header">{{ type[:3].upper() }}</div>
+                {% endfor %}
+            </div>
+            
+            <div class="effectiveness-row">
+                {% for multiplier in effectiveness.values()|tolist_slice(9, 18) %}
+                    <div data-effectiveness="{{ multiplier }}" class="{{ 'effect-' + multiplier|string|replace('.', '_') }}">
+                        {% if multiplier == 2 %}
+                            2
+                        {% elif multiplier == 4 %}
+                            4
+                        {% elif multiplier == 0.5 %}
+                            ½
+                        {% elif multiplier == 0.25 %}
+                            ¼
+                        {% else %}
+                            {{ '' if multiplier == 1.0 else multiplier }}
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+<!-- Pokemon Info -->
+    <div class="training-data">
+        <h2>Training</h2>
+        <dl>
+            <dt>EV yield</dt>
+            <dd>{{ data.EVs.split(",")[1] }} {{ data.EVs.split(",")[0] }}, {{ data.EVs.split(",")[3] }} {{ data.EVs.split(",")[2] }}</dd>
+
+            <dt>Catch rate</dt>
+            <dd>{{ data.CatchRate }}</dd>
+
+            <dt>Base Friendship</dt>
+            <dd>{{ data.Happiness }}</dd>
+
+            <dt>Base Exp.</dt>
+            <dd>{{ data.BaseExp }}</dd>
+
+            <dt>Growth Rate</dt>
+            <dd>{{ data.GrowthRate }}</dd>
+        </dl>
+
+        <h2>Breeding</h2>
+        <dl>
+            <dt>Egg Groups</dt>
+            <dd>{{ data.EggGroups.replace(",", ", ") }}</dd>
+
+            <dt>Gender</dt>
+            <dd>{{ data.GenderRatio.replace("Female", "") }} female, {{ (100 - data.GenderRatio.replace("FemaleOneEighth", "12.5").replace("Female", "").replace("%", "")|float)|round(2) }}% male</dd>
+
+            <dt>Egg cycles</dt>
+            <dd>{{ (data.HatchSteps/255)|round(0, 'floor') }} ({{ data.HatchSteps }} steps)</dd>
+        </dl>
+    </div>
+</div>
+
+<div class="side-by-side-container">
+<!-- Stats Table -->
+<h2>Stat Total: 
+    {% set bst = data.BaseStats|sum %}
+    {{ bst }}
+</h2>
+        <!-- HP calculated differently -->
+        <tr>
+            <td>HP</td>
+            <td>{{ data.BaseStats[0] }}</td>
+            <td>
+                <div class="bar" data-stat="{{ data.BaseStats[0] }}"></div>
+            </td>
+            <td>{{ (data.BaseStats[0] * 2 + 110) | int }}</td>
+            <td>{{ (data.BaseStats[0] * 2 + 110 + 31 + 63) | int }}</td>
+        </tr>
+
+        <!-- Looping through the other stats -->
+        {% for stat, label in [(1, "Attack"), (2, "Defense"), (4, "Special Attack"), (5, "Special Defense"), (3, "Speed")] %}
+            <tr>
+                <td>{{ label }}</td>
+                <td>{{ data.BaseStats[stat] }}</td>
+                <td>
+                    <div class="bar" data-stat="{{ data.BaseStats[stat] }}"></div>
+                </td>
+                <td>{{ ((data.BaseStats[stat] * 2 + 5) * 0.9) | round(0, 'floor') | int }}</td>
+                <td>{{ ((data.BaseStats[stat] * 2 + 5 + 31 + 63) * 1.1) | round(0, 'floor') | int }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+<!-- Evolutions -->
+<div class="evolutions-container">
+    <h2>Evolutions</h2>
+    {% macro render_evolutions(evolutions) %}
+    <ul class="evolutions-list">
+        {% for evolution in evolutions %}
+        <li class="evolution-item">
+            <a href="{{ url_for('pokemon', name=' ' + evolution.get('name', 'Unknown')) }}">{{ evolution.get('name', 'Unknown') }}</a>
+            {% if evolution.get('condition_type') and evolution.get('condition_value') %}
+            <span class="evolution-condition">({{ evolution.condition_type }}: {{ evolution.condition_value }})</span>
+            {% endif %}
+    
+            {% if evolution.get('Evolutions') %}
+            {{ render_evolutions(evolution.get('Evolutions', [])) }}
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% endmacro %}
+    {{ render_evolutions(data.get('Evolutions', [])) }}
+</div>
+
+</div>
+    
+
+<!-- Scripts -->
+    <script>
+        document.querySelectorAll('.bar').forEach(bar => {
+            const statValue = parseInt(bar.getAttribute('data-stat'));
+            bar.style.width = (statValue / 255 * 100) + "%";
+            
+            // Setting the color based on the thresholds
+            if (statValue <= 29) {
+                bar.classList.add('barchart-rank-1'); // Red
+            } else if (statValue > 29 && statValue <= 59) {
+                bar.classList.add('barchart-rank-2'); // Orange
+            } else if (statValue > 59 && statValue <= 89) {
+                bar.classList.add('barchart-rank-3'); // Yellow
+            } else if (statValue > 89 && statValue <= 119) {
+                bar.classList.add('barchart-rank-4'); // Green
+            } else if (statValue > 119 && statValue <= 149) {
+                bar.classList.add('barchart-rank-5'); // Dark Green
+            } else {
+                bar.classList.add('barchart-rank-6'); // Blue
+            }
+        });
+
+        function searchFunction() {
+            const input = document.getElementById("searchInput");
+            const filter = input.value.toUpperCase();
+            const searchResults = document.getElementById("searchResults");
+            searchResults.innerHTML = ''; 
+            let count = 0;
+
+            for (let i = 0; i < pokemonNames.length && count < 10; i++) {
+                const txtValue = pokemonNames[i];
+
+                if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                    const resultLink = document.createElement('a');
+                    resultLink.href = "#"; 
+                    resultLink.innerText = txtValue;
+                    searchResults.appendChild(resultLink);
+                    count++;
+                }
+            }
+            
+            // Show or hide the search results
+            searchResults.style.display = count > 0 ? 'block' : 'none';
+        }
+
+    </script>
+{% endblock %}
